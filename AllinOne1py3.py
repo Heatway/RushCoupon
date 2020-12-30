@@ -40,11 +40,11 @@ class Unifri1():
     unifripaypril1 = []
     unifrigoodsbtl1 = []
     a = 0
-    unifristate1 = {"00":"暂未开始","10":"立即抢购","20":"去查看","30":"无法抢购","40":"已抢光","50":"未开始"}
+    unifristate1 = {"00":"暂未开始","10":"立即抢购","20":"去查看","30":"无法抢购","40":"已抢光","50":"未开始","60":"处理中"}
     for b in range(0,len(unifritabL1)):
       for i,goods in enumerate(unifritabL1[b]["goodsList"],a+1):
         unifrigoodsnl11.append(str(i)+" "+unifritabL1[b]["timeNav"]+\
-                                              unifristate1.get(goods["state"])+" "+goods["goodsName"])
+                                              unifristate1.get(goods["state"],"未知状态")+" "+goods["goodsName"])
         unifrigoodsnl1.append(goods["goodsName"])
         nowdate1 = time.strftime("%Y-%m-%d",time.localtime(int(time.time())))
         actLtimes1 = int(time.mktime(time.strptime(nowdate1+" "+unifritabL1[b]["timeNav"]+":00",
@@ -55,6 +55,8 @@ class Unifri1():
         unifrigoodsidl1.append(goods["goodsId"])
       for goods in unifritabL1[b]["goodsList"]:
         unifripaypril1.append(goods["price"]+"0")
+    #古老代码,注释掉,有需要才开启吧
+    """
     if re.findall(r"fourNineGoodsList",str(unifrigoodsq1),flags=re.I) != []:
       for i,goods in enumerate(unifrigoodsq1["resdata"]["fourNineGoodsList"],i+1):
         unifrigoodsnl11.append(str(i)+" "+unifristate1.get(goods["state"])+" "+goods["goodsName"])
@@ -63,6 +65,7 @@ class Unifri1():
         unifrigoodsidl1.append(goods["goodsId"])
       for goods in unifrigoodsq1["resdata"]["fourNineGoodsList"]:
         unifripaypril1.append(goods["price"]+"0")
+    """
     unifrigoodsn1 = "\n".join(unifrigoodsnl11)
     print(unifrigoodsq1["msg"]+"\n\n"+unifrigoodsn1)
     unifrigoodss1 = input("\n请输入对应的数字选择商品:")
@@ -165,7 +168,7 @@ class Unifri1():
       unifriftimes1 = 1
       self.UnifriGetOrders1()
       while re.findall(r"下单成功",str(unifriorders1)) == []:
-        print(("返回信息: "+unifriorders1).ljust(50),end="\r")
+        print("返回信息: "+unifriorders1)
         if re.findall(r"达到上限|数量限制|次数限制",str(unifriorders1)) != []:
           print("返回信息: "+unifriorders1)
           print("该账号已有订单,不能再次购买\n")
@@ -182,17 +185,20 @@ class Unifri1():
             if int(unifriwporders1) > 0:
               print("该账号有未支付订单,请尽快支付,逾期将失效哦")
               for files in os.walk(os.getcwd()):
-                if re.findall(r".*提醒过未支付订单了\.reminded",str(files),flags=re.I) != []:
+                if re.findall(r".*提醒过未支付订单了.*\.reminded",str(files),flags=re.I) != []:
                   pass
                 else:
                   if int(linecache.getline(r"unifri1cfg.set",37).strip()) == 1:
                     times = time.strftime("%H{}%M{}%S{}").format("时","分","秒")   #加入时间,避免造成重复消息导致Server酱无法推送
                     requests.get("https://sc.ftqq.com/%s.send?text=%s Unifri1的账号有未支付订单,请尽快支付,逾期将失效哦"\
                             %(linecache.getline(r"unifri1cfg.set",39).strip(),times))
-                    with open(time.strftime("%H{}%M{}%S{}").format("时","分","秒")+" 提醒过未支付订单了.reminded","w") as ordered:
+                    with open(time.strftime("%H{}%M{}%S{}").format("时","分","秒")+" 提醒过未支付订单了 不删除该文件一直不会提醒的.reminded","w") as ordered:
                       pass
-          except:pass
-        print(("没有下单成功,将在%s秒后第%s次刷新"%(unifriftime1,unifriftimes1)).ljust(50),end="\r")
+          except (requests.exceptions.Timeout,requests.exceptions.ConnectionError):
+            pass
+          except TypeError:
+            print("查询未支付订单出错了,可能刷新间隔过短导致限制访问一段时间,请手动查看是否有未支付订单")
+        print("没有下单成功,将在%s秒后第%s次刷新"%(unifriftime1,unifriftimes1))
         time.sleep(float(unifriftime1))
         self.UnifriGetOrders1()
     except (requests.exceptions.Timeout,requests.exceptions.ConnectionError,ValueError):
